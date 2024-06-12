@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    topic = "Addressing class imbalance in FF NNs (tensorflow, keras)"
+    topic = "Applying Central Limit Theorem in Python"
     script = generate_script(topic)
     
     for idx, code_block in enumerate(script.highlights):

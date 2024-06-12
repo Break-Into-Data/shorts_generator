@@ -1,6 +1,7 @@
 import os
 import logging
 from dataclasses import dataclass
+from pprint import pprint
 from typing import Optional
 
 import black
@@ -94,9 +95,9 @@ Code for the slide:
 ---
 Please find important code blocks inside this code. Example output:
 ```csv
-start_line_number, end_line_number, description_of_the_block
-1, 5, "These lines import all the necessary libraries"
-23, 23, "This line trains the model"
+start_line_number|end_line_number|description_of_the_block
+1|5|"These lines import all the necessary libraries"
+23|23|"This line trains the model"
 ```
 """
 
@@ -123,7 +124,11 @@ def invoke_llm(prompt: str) -> str:
 def _generate_topic_description(topic: str) -> str:
     logger.info(f"Generating description for topic: {topic}")
     prompt = PROMPT_DESCRIPTION_GENERATION.format(topic)
-    return invoke_llm(prompt)
+
+    description = invoke_llm(prompt)
+    print(description)
+
+    return description
 
 
 def _generate_code(topic: str, description: str) -> str:
@@ -135,12 +140,17 @@ def _generate_code(topic: str, description: str) -> str:
     if code.startswith("python\n"):
         code = code[7:]
 
+    # remove all comments
+    code = "\n".join([line for line in code.split("\n") if not line.strip().startswith("#")])
+
     # Format the code
     black_mode = black.Mode(line_length=42)
     try:
         code = black.format_str(code, mode=black_mode)
     except black.NothingChanged:
         pass
+
+    print(code)
 
     return code
 
@@ -159,7 +169,7 @@ def _generate_highlights(topic: str, description: str, code: str) -> list[Script
         output = '\n'.join(output.split("\n")[1:])
 
     csv_lines = output.split("\n")
-    data = [line.split(", ") for line in csv_lines]
+    data = [line.split("|").strip() for line in csv_lines]
 
     result = []
 
@@ -169,13 +179,19 @@ def _generate_highlights(topic: str, description: str, code: str) -> list[Script
         except ValueError:
             logger.warning(f"Skipping row: {row}")
             continue
-        result.append(
-            ScriptCodeHighlight(
-                text=description.strip('"').strip("'"),
-                line_number=int(start),
-                line_count=int(end) - int(start) + 1,
+        try:
+            result.append(
+                ScriptCodeHighlight(
+                    text=description.strip('"').strip("'"),
+                    line_number=int(start) - 1,
+                    line_count=int(end) - int(start) + 1,
+                )
             )
-        )
+        except ValueError:
+            logger.warning(f"Can't parse row: {row}")
+            continue
+
+    pprint(result)
 
     return result
 
