@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import io
 import subprocess
-import uuid
 
 import pixie
 import black
@@ -22,8 +21,8 @@ from pygments.token import (
     Punctuation,
 )
 
-from src.audio_generation import VoiceClip
 from src.script import Script
+from src.audio_processing import combine_audio_clips
 
 
 class SimpleStyle(Style):
@@ -69,7 +68,7 @@ def generate_code_image(code: str):
     )
 
     image = PIL.Image.open(io.BytesIO(highlighted_code))
-    path = "images/code_image.png"
+    path = "./assets/images/code_image.png"
     image.save(path)
 
     return path
@@ -124,26 +123,11 @@ class HighlightedCodeBlock:
 
 
 def add_audio_to_video(video_path: str, voice_path: str, start_offset: int):
-    new_path = f"videos/{uuid.uuid4().hex}.mp4"
+    new_path = f"./assets/clips/final.mp4"
     command = f"ffmpeg -i {video_path} -itsoffset {start_offset} -i {voice_path} -map 0:v -map 1:a -c:v copy -c:a aac {new_path}"
     subprocess.run(command, shell=True, check=True)
     
     return new_path
-
-
-def combine_audio_clips(voice_clips: list[VoiceClip]):
-    combined_path = f"videos/{uuid.uuid4().hex}.mp3"
-    filelist = "filelist.txt"
-    
-    # Write the list of audio files to a text file
-    with open(filelist, "w+") as f:
-        for voice_clip in voice_clips:
-            f.write(f"file '{voice_clip.file_path}'\n")
-            
-    command = f"ffmpeg -f concat -safe 0 -i {filelist} -c copy {combined_path}"
-    subprocess.run(command, shell=True, check=True)
-    
-    return combined_path
 
 
 def generate_video(script: Script):
@@ -158,25 +142,26 @@ def generate_video(script: Script):
                 line_count=code_block.line_count,
             ),
         )
-        frame.write_file(f"images/frame_{idx}.png")
+        frame.write_file(f"./assets/images/frame_{idx}.png")
 
         dur = code_block.voice_clip.duration
-        command = f"ffmpeg -y -loop 1 -i images/frame_{idx}.png -c:v libx264 -t {dur} -pix_fmt yuv420p videos/clip_{idx}.mp4"
+        command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_{idx}.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_{idx}.mp4"
         subprocess.run(command, shell=True, check=True)
 
     # create a text file with the list of videos to concatenate
-    with open("videos/concat.txt", "w") as f:
+    concat_file = "./assets/clips/concat.txt"
+    with open(concat_file, "w") as f:
         for idx, code_block in enumerate(script.highlights):
             f.write(f"file 'clip_{idx}.mp4'\n")
 
     # combine all the clips into one video
+    video_path = "./assets/clips/combined.mp4"
+    
     command = (
-        "ffmpeg -y -f concat -safe 0 -i videos/concat.txt -c copy videos/combined.mp4"
+        f"ffmpeg -y -f concat -safe 0 -i {concat_file} -c copy {video_path}"
     )
     subprocess.run(command, shell=True, check=True)
     
-    video_path = "videos/combined.mp4"
-
     # combine all the audio files into one
     final_audio_filepath = combine_audio_clips([
         code_block.voice_clip

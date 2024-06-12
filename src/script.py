@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
-from src.audio_generation import VoiceClip
+
+from src.audio_processing import VoiceClip
 
 
 @dataclass
