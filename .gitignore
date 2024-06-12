@@ -1,0 +1,12 @@
+.DS_Store
+.env
+*.png
+*.mp3
+*.mp4
+videos/*
+!videos/.gitkeep
+images/*
+!images/.gitkeep
+filelist.txt
+
+__pycache__/
