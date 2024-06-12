@@ -53,12 +53,12 @@ def pad_audio_file(file_path: str, duration: int):
 
 
 def generate_audio(text: str, save_as: str) -> VoiceClip:
-    if not os.path.exists(save_as):
-        client = ElevenLabs(
-            api_key=os.getenv("ELEVEN_API_KEY"),
-        )
-        output = client.generate(text=text)
-        save(output, save_as)
+    # if not os.path.exists(save_as):
+    client = ElevenLabs(
+        api_key=os.getenv("ELEVEN_API_KEY"),
+    )
+    output = client.generate(text=text)
+    save(output, save_as)
     
     dur = get_audio_length(save_as)
     pad_audio_file(save_as, dur)

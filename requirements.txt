@@ -5,3 +5,4 @@ pygments==2.18.0
 Pillow==10.3.0
 pixie-python==4.3.0
 black==24.4.2
+openai==1.33.0

@@ -21,7 +21,7 @@ from pygments.token import (
     Punctuation,
 )
 
-from src.script import Script
+from src.script_processing import Script
 from src.audio_processing import combine_audio_clips
 
 
@@ -44,16 +44,6 @@ class SimpleStyle(Style):
 
 
 def generate_code_image(code: str):
-    # Configuration: Set line length
-    black_mode = black.Mode(line_length=42)
-
-    # Format the code
-    try:
-        code = black.format_str(code, mode=black_mode)
-        print("Formatted Code:\n", code)
-    except black.NothingChanged:
-        print("Code is already formatted.")
-
     # Highlight the code
     highlighted_code = highlight(
         code,
