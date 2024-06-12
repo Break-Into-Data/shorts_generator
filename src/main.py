@@ -60,7 +60,7 @@ model.fit(features, labels, epochs=10, class_weight=class_weights)
 
                 
     for idx, code_block in enumerate(script.highlights):
-        voice_file = f"voice_{idx}.mp3"
+        voice_file = f"./assets/audio/voice_{idx}.mp3"
         voice_clip = generate_audio(code_block.text, voice_file)
         code_block.voice_clip = voice_clip
 

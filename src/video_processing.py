@@ -124,7 +124,7 @@ class HighlightedCodeBlock:
 
 def add_audio_to_video(video_path: str, voice_path: str, start_offset: int):
     new_path = f"./assets/clips/final.mp4"
-    command = f"ffmpeg -i {video_path} -itsoffset {start_offset} -i {voice_path} -map 0:v -map 1:a -c:v copy -c:a aac {new_path}"
+    command = f"ffmpeg -i {video_path} -itsoffset {start_offset} -i {voice_path} -map 0:v -map 1:a -c:v copy -c:a aac -y {new_path}"
     subprocess.run(command, shell=True, check=True)
     
     return new_path

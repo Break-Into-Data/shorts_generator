@@ -32,7 +32,7 @@ def combine_audio_clips(voice_clips: list[VoiceClip]):
             file_name = os.path.basename(voice_clip.file_path)
             f.write(f"file '{file_name}'\n")
             
-    command = f"ffmpeg -f concat -safe 0 -i {concat_file} -c copy {combined_path}"
+    command = f"ffmpeg -f concat -safe 0 -i {concat_file} -c copy -y {combined_path}"
     subprocess.run(command, shell=True, check=True)
     
     return combined_path
