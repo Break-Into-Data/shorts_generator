@@ -198,31 +198,8 @@ def generate_script(topic: str) -> Script:
     description = _generate_topic_description(topic)
     code = _generate_code(topic, description)
 
-    code = """
-import elevenlabs
-import elevenlabs.client
-
-client = elevenlabs.client.ElevenLabs(
-    api_key="your_api_key"
-)
-
-text = "Hello world!"
-voice = "en-GB-Wavenet-A"
-
-speech = client.generate(
-    text=text, 
-    voice=voice
-)
-
-elevenlabs.save(
-    output, 
-    save_as
-)
-""".strip()
-
     highlights = _generate_highlights(topic, description, code)
 
-    description = "How to transcribe the text to audio using 11labs in 30 seconds?"
     script = Script(
         code=code,
         intro_text=description,
