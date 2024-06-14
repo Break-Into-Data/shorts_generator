@@ -87,21 +87,22 @@ def generate_frame(
     paint = pixie.Paint(pixie.SOLID_PAINT)
     paint.color = pixie.Color(1, 0, 0, 0.1)
 
-    line_height = 373 / 11
+    line_height = 371 / 11
 
-    ctx = image.new_context()
-    ctx.fill_style = paint
-    ctx.rounded_rect(
-        code_image_x + 0,
-        code_image_y + line_height * highlighted_code_block.line_number,
-        code_image.width,
-        line_height * highlighted_code_block.line_count + 12,
-        25,
-        25,
-        25,
-        25,
-    )
-    ctx.fill()
+    if highlighted_code_block.line_count > 0:
+        ctx = image.new_context()
+        ctx.fill_style = paint
+        ctx.rounded_rect(
+            code_image_x + 0,
+            code_image_y + line_height * highlighted_code_block.line_number,
+            code_image.width,
+            line_height * highlighted_code_block.line_count + 14,
+            25,
+            25,
+            25,
+            25,
+        )
+        ctx.fill()
 
     return image
 
@@ -124,6 +125,18 @@ def generate_video(script: Script):
     code_image_path = generate_code_image(script.code)
     code_image = pixie.read_image(code_image_path)
 
+    frame = generate_frame(
+        code_image=code_image,
+        highlighted_code_block=HighlightedCodeBlock(
+            line_number=-1,
+            line_count=0,
+        ),
+    )
+    frame.write_file("./assets/images/frame_intro.png")
+    dur = script.intro_text_voide_clip.duration
+    command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_intro.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_intro.mp4"
+    subprocess.run(command, shell=True, check=True)
+
     for idx, code_block in enumerate(script.highlights):
         frame = generate_frame(
             code_image=code_image,
@@ -141,6 +154,7 @@ def generate_video(script: Script):
     # create a text file with the list of videos to concatenate
     concat_file = "./assets/clips/concat.txt"
     with open(concat_file, "w") as f:
+        f.write("file 'clip_intro.mp4'\n")
         for idx, code_block in enumerate(script.highlights):
             f.write(f"file 'clip_{idx}.mp4'\n")
 
@@ -154,6 +168,8 @@ def generate_video(script: Script):
     
     # combine all the audio files into one
     final_audio_filepath = combine_audio_clips([
+        script.intro_text_voide_clip, 
+    ] + [
         code_block.voice_clip
         for code_block in script.highlights
     ])
@@ -165,7 +181,3 @@ def generate_video(script: Script):
     )
     print(video_path)
     return video_path
-
-
-if __name__ == "__main__":
-    generate_video()

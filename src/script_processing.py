@@ -20,31 +20,6 @@ client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-"""
-import tensorflow as tf
-
-# Simulated data: features and labels
-features = tf.random.normal([100, 10])
-labels = tf.concat([tf.zeros(80, dtype=tf.int32), tf.ones(20, dtype=tf.int32)], axis=0)
-
-# Model setup
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(10, activation='relu', input_shape=(10,)),
-    tf.keras.layers.Dense(1, activation='sigmoid')
-])
-
-# Class weights to handle imbalance
-class_weights = {0: 1, 1: 4}
-
-# Compile the model
-model.compile(optimizer='adam',
-            loss='binary_crossentropy',
-            metrics=['accuracy'])
-
-# Fit the model
-model.fit(features, labels, epochs=10, class_weight=class_weights)
-"""
-
 
 @dataclass
 class ScriptCodeHighlight:
@@ -60,6 +35,7 @@ class Script:
     intro_text: str
     highlights: list[ScriptCodeHighlight]
     cta_text: str
+    intro_text_voide_clip: Optional[VoiceClip] = None
 
 
 PROMPT_DESCRIPTION_GENERATION = """I'm creating a presentation about this topic:
@@ -67,7 +43,9 @@ PROMPT_DESCRIPTION_GENERATION = """I'm creating a presentation about this topic:
 {}
 ---
 Please describe what this topic is about (only the most important points).
-Description should be short - 2-5 sentences.
+This description is for the audience to understand the topic.
+Assume average or below average knowledge of the topic.
+Description should be short - 1-2 sentences.
 """
 
 PROMPT_CODE_GENERATION = """I'm creating a presentation about this topic:
@@ -76,9 +54,10 @@ PROMPT_CODE_GENERATION = """I'm creating a presentation about this topic:
 ---
 Please write a code snippet that demonstrates the main concept of this topic.
 Code must be short - up to 25 lines.
-Don't output anything else, start printing the code immediately. 
+Don't output anything else, start printing the code immediately.
 Make the code as simple as possible, while maintaining the clarity of the point we want to make. 
 Don't comment the code at all. 
+Very important: Any line of the code must not exceed 42 characters.
 """
 
 PROMPT_HIGHLIGHTS_GENERATION = """I'm creating a presentation about this topic:
@@ -93,11 +72,29 @@ Code for the slide:
 ---
 {}
 ---
-Please find important code blocks inside this code. Example output:
+Please find important code blocks inside this code. 
+Describe code blocks that are important for the audience to understand the topic.
+Descriptions should be short and relative to the topic.
+Don't be very repetitive and don't start all desceriptions in the same way, the text must be interesting and relevant to the topic.
+
+Good examples of description:
+"Here we do X, Y, and Z"
+"This code block is used to do X"
+"This is a code block that is used to do Y"
+"In this line we do Z"
+"Execution of this line will do X"
+
+Don't do this (bad examples):
+"Importing the necessary libraries"
+"Calling the function"
+"Defines the constants used in the code"
+You are talking to the audience.
+
+Format of output:
 ```csv
 start_line_number|end_line_number|description_of_the_block
-1|5|"These lines import all the necessary libraries"
-23|23|"This line trains the model"
+1|5|"Description of block 1"
+23|23|"Description of block 2"
 ```
 """
 
@@ -122,7 +119,7 @@ def invoke_llm(prompt: str) -> str:
 
 
 def _generate_topic_description(topic: str) -> str:
-    logger.info(f"Generating description for topic: {topic}")
+    logger.info("Generating description for topic: %s", topic)
     prompt = PROMPT_DESCRIPTION_GENERATION.format(topic)
 
     description = invoke_llm(prompt)
@@ -156,7 +153,7 @@ def _generate_code(topic: str, description: str) -> str:
 
 
 def _generate_highlights(topic: str, description: str, code: str) -> list[ScriptCodeHighlight]:
-    logger.info(f"Generating highlights for topic: {topic}")
+    logger.info("Generating highlights for topic: %s", topic)
     annotated_code = _annote_line_numbers(code)
     prompt = PROMPT_HIGHLIGHTS_GENERATION.format(topic, description, annotated_code)
     output = invoke_llm(prompt)
@@ -169,7 +166,7 @@ def _generate_highlights(topic: str, description: str, code: str) -> list[Script
         output = '\n'.join(output.split("\n")[1:])
 
     csv_lines = output.split("\n")
-    data = [line.split("|").strip() for line in csv_lines]
+    data = [line.strip().split("|") for line in csv_lines]
 
     result = []
 
@@ -200,11 +197,36 @@ def generate_script(topic: str) -> Script:
     logger.info(f"Generating script for topic: {topic}")
     description = _generate_topic_description(topic)
     code = _generate_code(topic, description)
+
+    code = """
+import elevenlabs
+import elevenlabs.client
+
+client = elevenlabs.client.ElevenLabs(
+    api_key="your_api_key"
+)
+
+text = "Hello world!"
+voice = "en-GB-Wavenet-A"
+
+speech = client.generate(
+    text=text, 
+    voice=voice
+)
+
+elevenlabs.save(
+    output, 
+    save_as
+)
+""".strip()
+
     highlights = _generate_highlights(topic, description, code)
 
+    description = "How to transcribe the text to audio using 11labs in 30 seconds?"
     script = Script(
         code=code,
-        intro_text="Hello",
+        intro_text=description,
+        intro_text_voide_clip=None,
         highlights=highlights,
         cta_text="",
     )

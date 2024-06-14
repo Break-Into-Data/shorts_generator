@@ -16,8 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    topic = "Applying Central Limit Theorem in Python"
+    topic = "Using elevenlabs to generate audio from text"
     script = generate_script(topic)
+
+    voice_clip = generate_audio(script.intro_text, "./assets/audio/intro.mp3")
+    script.intro_text_voide_clip = voice_clip
     
     for idx, code_block in enumerate(script.highlights):
         voice_file = f"./assets/audio/voice_{idx}.mp3"
