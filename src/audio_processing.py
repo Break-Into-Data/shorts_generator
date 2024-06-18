@@ -8,7 +8,7 @@ import dotenv
 import mutagen.mp3
 
 from elevenlabs import save
-from elevenlabs.client import ElevenLabs
+from elevenlabs.client import ElevenLabs, DEFAULT_VOICE
 
 
 dotenv.load_dotenv()
@@ -57,7 +57,8 @@ def generate_audio(text: str, save_as: str) -> VoiceClip:
     client = ElevenLabs(
         api_key=os.getenv("ELEVEN_API_KEY"),
     )
-    output = client.generate(text=text)
+    voice = os.getenv("ELEVEN_VOICE", DEFAULT_VOICE)
+    output = client.generate(text=text, voice=voice)
     save(output, save_as)
     
     dur = get_audio_length(save_as)
