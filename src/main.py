@@ -23,7 +23,9 @@ def main():
     title = "Using elevenlabs to generate audio from text"
     description = "A video about using elevenlabs to generate audio from text"
     topic = "Using elevenlabs to generate audio from text"
-    script = generate_script(topic)
+    library = "elevenlabs"
+
+    script = generate_script(topic, library)
 
     voice_clip = generate_audio(script.intro_text, "./assets/audio/intro.mp3")
     script.intro_text_voide_clip = voice_clip

@@ -144,6 +144,10 @@ def _generate_code(topic: str, description: str, library: str) -> str:
     # remove all comments
     code = "\n".join([line for line in code.split("\n") if not line.strip().startswith("#")])
 
+    code = code.strip().strip("`")
+
+    print(code)
+
     # Format the code
     black_mode = black.Mode(line_length=42)
     try:
@@ -151,6 +155,7 @@ def _generate_code(topic: str, description: str, library: str) -> str:
     except black.NothingChanged:
         pass
 
+    print("Formatted code:")
     print(code)
 
     return code
