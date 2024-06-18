@@ -75,6 +75,8 @@ def generate_frame(
     highlighted_code_block,
     frame_w=1080,
     frame_h=1920,
+    frame_idx: int = 0,
+    frames_number: int = 1,
 ):
     image = pixie.Image(frame_w, frame_h)
     image.fill(pixie.Color(0.12, 0.12, 0.12, 1))
@@ -110,6 +112,19 @@ def generate_frame(
         )
         ctx.fill()
 
+    progress_paint = pixie.Paint(pixie.SOLID_PAINT)
+    progress_paint.color = pixie.Color(0.51, 0.22, 0.92, 0.3)
+    
+    ctx = image.new_context()
+    ctx.fill_style = progress_paint
+    ctx.rect(
+        0,
+        0,
+        code_image.width * (frame_idx / frames_number),
+        frame_h * 0.05,
+    )
+    ctx.fill()
+
     return image
 
 
@@ -131,12 +146,16 @@ def generate_video(script: Script):
     code_image_path = generate_code_image(script.code)
     code_image = pixie.read_image(code_image_path)
 
+    frames_number = len(script.highlights) + 1
+
     frame = generate_frame(
         code_image=code_image,
         highlighted_code_block=HighlightedCodeBlock(
             line_number=-1,
             line_count=0,
         ),
+        frame_idx=0,
+        frames_number=frames_number,
     )
     frame.write_file("./assets/images/frame_intro.png")
     dur = script.intro_text_voide_clip.duration
@@ -151,6 +170,8 @@ def generate_video(script: Script):
                 line_number=code_block.line_number,
                 line_count=code_block.line_count,
             ),
+            frame_idx=idx + 1,
+            frames_number=frames_number,
         )
         frame.write_file(f"./assets/images/frame_{idx}.png")
 
