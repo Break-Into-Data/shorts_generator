@@ -3,6 +3,7 @@ import logging
 from src.audio_processing import generate_audio
 from src.video_processing import generate_video
 from src.script_processing import generate_script
+from src.uploaders.youtube_uploader import UploadOptions, upload_to_youtube
 
 
 root_logger = logging.getLogger()
@@ -15,7 +16,12 @@ root_logger.addHandler(ch)
 logger = logging.getLogger(__name__)
 
 
+DRY_RUN = True
+
+
 def main():
+    title = "Using elevenlabs to generate audio from text"
+    description = "A video about using elevenlabs to generate audio from text"
     topic = "Using elevenlabs to generate audio from text"
     script = generate_script(topic)
 
@@ -29,6 +35,19 @@ def main():
 
 
     video_path = generate_video(script)
+
+    opts = UploadOptions(
+        file=video_path,
+        title=title,
+        description=description,
+        category="27",
+        keywords="elevenlabs,audio,text,code,python,programming,tutorial",
+        privacyStatus="public",
+    )
+
+    if not DRY_RUN:
+        upload_to_youtube(opts)
+
 
 
 if __name__ == "__main__":
