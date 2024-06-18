@@ -5,20 +5,17 @@ from pprint import pprint
 from typing import Optional
 
 import black
-from openai import OpenAI
 from dotenv import load_dotenv
+import requests
 
 from src.audio_processing import VoiceClip
+from src.llms import openai_gpt4 as gpt4
+from src.llms import grok_llama3 as llama3
 
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
 
 
 @dataclass
@@ -38,25 +35,33 @@ class Script:
     intro_text_voide_clip: Optional[VoiceClip] = None
 
 
-PROMPT_DESCRIPTION_GENERATION = """I'm creating a presentation about this topic:
----
+PROMPT_DESCRIPTION_GENERATION = """I'm creating a youtube video about this topic:
+--- Topic:
 {}
----
-Please describe what this topic is about (only the most important points).
-This description is for the audience to understand the topic.
+--- Rules:
+Please output the introduction text for this topic.
 Assume average or below average knowledge of the topic.
-Description should be short - 1-2 sentences.
+Description should be short - 1 sentence (up to 20 words).
+It should be engaging and attention-grabbing.
+--- Format examples:
+"How to achieve [dream outcome] without [massive obstacle]"
+"60 second [topic] masterclass"
+"Here's how to [get desired outcome] in [timeframe]"
+---
+Only output the description, no other text or comments.
 """
 
 PROMPT_CODE_GENERATION = """I'm creating a presentation about this topic:
----
-{}
----
+--- Topic:
+{topic}
+--- Documentation:
+{documentation}
+--- 
 Please write a code snippet that demonstrates the main concept of this topic.
 Code must be short - up to 25 lines.
 Don't output anything else, start printing the code immediately.
 Make the code as simple as possible, while maintaining the clarity of the point we want to make. 
-Don't comment the code at all. 
+Don't comment the code in any way. 
 Very important: Any line of the code must not exceed 42 characters.
 """
 
@@ -104,34 +109,33 @@ def _annote_line_numbers(code: str) -> str:
     return "\n".join(annotated_lines)
 
 
-def invoke_llm(prompt: str) -> str:
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
-        model="gpt-4-turbo",
-    )
-
-    return chat_completion.choices[0].message.content
-
-
 def _generate_topic_description(topic: str) -> str:
     logger.info("Generating description for topic: %s", topic)
     prompt = PROMPT_DESCRIPTION_GENERATION.format(topic)
 
-    description = invoke_llm(prompt)
+    description = gpt4.invoke(prompt, temperature=1.0)
     print(description)
 
     return description
 
 
-def _generate_code(topic: str, description: str) -> str:
+def _fetch_documentation(library: str) -> str:
+    logger.info("Fetching documentation for library: %s", library)
+    url = f"https://pypi.org/pypi/{library}/json"
+
+    response = requests.get(url)
+    data = response.json()
+
+    return data["info"]["description"]
+
+
+def _generate_code(topic: str, description: str, library: str) -> str:
     logger.info(f"Generating code for topic: {topic}")
-    prompt = PROMPT_CODE_GENERATION.format(topic)
-    code = invoke_llm(prompt)
+    documentation = _fetch_documentation(library)
+    prompt = PROMPT_CODE_GENERATION.format(topic=topic, documentation=documentation)
+    code = llama3.invoke(prompt, temperature=0.3)
+
+    code = code[code.index("```"):]
 
     code = code.strip().strip("`")
     if code.startswith("python\n"):
@@ -156,7 +160,7 @@ def _generate_highlights(topic: str, description: str, code: str) -> list[Script
     logger.info("Generating highlights for topic: %s", topic)
     annotated_code = _annote_line_numbers(code)
     prompt = PROMPT_HIGHLIGHTS_GENERATION.format(topic, description, annotated_code)
-    output = invoke_llm(prompt)
+    output = gpt4.invoke(prompt)
 
     output = output.strip().strip("`")
     if output.startswith("csv\n"):
@@ -193,10 +197,10 @@ def _generate_highlights(topic: str, description: str, code: str) -> list[Script
     return result
 
 
-def generate_script(topic: str) -> Script:
+def generate_script(topic: str, library: str) -> Script:
     logger.info(f"Generating script for topic: {topic}")
     description = _generate_topic_description(topic)
-    code = _generate_code(topic, description)
+    code = _generate_code(topic, description, library)
 
     highlights = _generate_highlights(topic, description, code)
 

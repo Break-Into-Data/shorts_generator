@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import io
+import logging
 import subprocess
 
 import pixie
@@ -25,6 +26,9 @@ from src.script_processing import Script
 from src.audio_processing import combine_audio_clips
 
 
+logger = logging.getLogger(__name__)
+
+
 class SimpleStyle(Style):
     default_style = ""
     background_color = "#212121"
@@ -44,6 +48,8 @@ class SimpleStyle(Style):
 
 
 def generate_code_image(code: str):
+    logger.info("Generating code image")
+
     # Highlight the code
     highlighted_code = highlight(
         code,
@@ -115,8 +121,8 @@ class HighlightedCodeBlock:
 
 def add_audio_to_video(video_path: str, voice_path: str, start_offset: int):
     new_path = f"./assets/clips/final.mp4"
-    command = f"ffmpeg -i {video_path} -itsoffset {start_offset} -i {voice_path} -map 0:v -map 1:a -c:v copy -c:a aac -y {new_path}"
-    subprocess.run(command, shell=True, check=True)
+    command = f"ffmpeg -i {video_path} -itsoffset {start_offset} -i {voice_path} -map 0:v -map 1:a -c:v copy -c:a aac -y {new_path}  -hide_banner -loglevel error"
+    subprocess.run(command, shell=True, check=True, capture_output=False)
     
     return new_path
 
@@ -134,10 +140,11 @@ def generate_video(script: Script):
     )
     frame.write_file("./assets/images/frame_intro.png")
     dur = script.intro_text_voide_clip.duration
-    command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_intro.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_intro.mp4"
-    subprocess.run(command, shell=True, check=True)
+    command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_intro.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_intro.mp4  -hide_banner -loglevel error"
+    subprocess.run(command, shell=True, check=True, capture_output=False)
 
     for idx, code_block in enumerate(script.highlights):
+        logger.info("Generating frame %d", idx)
         frame = generate_frame(
             code_image=code_image,
             highlighted_code_block=HighlightedCodeBlock(
@@ -148,8 +155,8 @@ def generate_video(script: Script):
         frame.write_file(f"./assets/images/frame_{idx}.png")
 
         dur = code_block.voice_clip.duration
-        command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_{idx}.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_{idx}.mp4"
-        subprocess.run(command, shell=True, check=True)
+        command = f"ffmpeg -y -loop 1 -i ./assets/images/frame_{idx}.png -c:v libx264 -t {dur} -pix_fmt yuv420p ./assets/clips/clip_{idx}.mp4  -hide_banner -loglevel error"
+        subprocess.run(command, shell=True, check=True, capture_output=False)
 
     # create a text file with the list of videos to concatenate
     concat_file = "./assets/clips/concat.txt"
@@ -162,9 +169,9 @@ def generate_video(script: Script):
     video_path = "./assets/clips/combined.mp4"
     
     command = (
-        f"ffmpeg -y -f concat -safe 0 -i {concat_file} -c copy {video_path}"
+        f"ffmpeg -y -f concat -safe 0 -i {concat_file} -c copy {video_path}  -hide_banner -loglevel error"
     )
-    subprocess.run(command, shell=True, check=True)
+    subprocess.run(command, shell=True, check=True, capture_output=False)
     
     # combine all the audio files into one
     final_audio_filepath = combine_audio_clips([

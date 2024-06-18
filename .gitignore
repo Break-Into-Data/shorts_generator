@@ -10,3 +10,4 @@ images/*
 filelist.txt
 
 __pycache__/
+client_secret.json

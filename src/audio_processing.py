@@ -31,9 +31,9 @@ def combine_audio_clips(voice_clips: list[VoiceClip]):
             # extract file name
             file_name = os.path.basename(voice_clip.file_path)
             f.write(f"file '{file_name}'\n")
-            
-    command = f"ffmpeg -f concat -safe 0 -i {concat_file} -c copy -y {combined_path}"
-    subprocess.run(command, shell=True, check=True)
+    
+    command = f"ffmpeg -f concat -safe 0 -i {concat_file} -c copy -y {combined_path}  -hide_banner -loglevel error"
+    subprocess.run(command, shell=True, check=True, capture_output=False)
     
     return combined_path
 
@@ -46,7 +46,7 @@ def get_audio_length(file_path: str) -> int:
 def pad_audio_file(file_path: str, duration: int):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_file = os.path.join(tmpdir, "tmp.mp3")
-        command = f"ffmpeg -y -i {file_path} -af apad=whole_dur={duration} {tmp_file}"
+        command = f"ffmpeg -y -i {file_path} -af apad=whole_dur={duration} {tmp_file}  -hide_banner -loglevel error"
         subprocess.run(command, shell=True, check=True)
         # move the padded file to the original file path
         os.rename(tmp_file, file_path)
